@@ -2,6 +2,13 @@
 
 ## Linear Regression Model:
 linmod <- function(formula, dat){
+## linmod function: using QR decomposition approach to fit linear models as lm() in R does.
+## Input: formula - a specified linear model formula; dat - a data frame containing corresponding data.
+## Output: re - an object of class 'linmod', a list containing following elements:
+  ##  beta - the vector of least squares parameter estimates      V - estimated covariance matrix 
+  ##  mu - the vector of expected values      y - the vector of response variables
+  ##  yname - the name of response variables      formula - model formula
+  ##  flev - a named list for factor variables and their levels     sigma - estimated standard deviation
 
   y <- model.frame(formula, dat)[[1]]   ## the vector of response variable
   yname <- all.vars(formula)[1]   ## the name of response variable
@@ -25,18 +32,24 @@ linmod <- function(formula, dat){
   V <- (inv_R %*% t(inv_R)) * var_resid    ## the estimated covariance matrix of least square estimators
   colnames(V) <- rownames(V) <- colnames(x)   ## name the rows and columns of estimated covariance matrix
   
+  flev <- NULL    ## initial list flev
+  for (i in xname){
+    if (is.factor(dat[[i]]) == TRUE){
+      flev[[i]] <- levels(dat[[i]])
+    }
+  } ## use a loop to find factor variables and store their levels in list flev
+    
   sigma <- c(sqrt(var_resid))   ## the estimated standard deviation of response and residuals
   names(sigma) <- 'residuals'     ## name sigma to identify response and residuals
-  
-  # flev <- 
-  
-  re <- list(beta = beta, V = V, mu = mu, y = y, yname = yname, fitted_values = drop(y_fitted), residuals = drop(resid), formula = formula, sigma = sigma) 
-  class(re) <- 'linmod'
+
+  re <- list(beta = beta, V = V, mu = mu, y = y, yname = yname, flev = flev, fitted_values = drop(y_fitted), residuals = drop(resid), formula = formula, sigma = sigma) 
+  class(re) <- 'linmod'   ## return to an object of class 'linmod'
   return(re)
 }
 
 ## Print Function
 print.linmod <- function(x){
+##  a print method function for x, an object of class 'linmod'
   
   est_bind <- cbind(x$beta, sqrt(diag(x$V)))    ## calculate standard deviations and bind with parameters estimates 
   colnames(est_bind) <- c('Estimate', 's.e.')   ## name the columns of bound matrix    
@@ -47,6 +60,7 @@ print.linmod <- function(x){
 
 ## Plot Function
 plot.linmod <- function(x){
+##  a plot method function for x, an object of class 'linmod'
   
   plot(x = x$fitted_values, y = x$residuals, xlab = 'fitted values', ylab = 'residuals', xlim = )    ## plot model residuals against fitted values
   abline(h = 0, col = 'blue', lty = 'dashed')  ## dashed horizontal line
@@ -54,8 +68,19 @@ plot.linmod <- function(x){
 
 ## Predict Function
 predict.linmod <- function(x, newdata){
-   
+## a predict method for x, an object of class 'linmod' with newdata, a data frame containing values of predictor variables
+  
+  for (i in names(x$flev)){
+    if (is.factor(newdata[[i]]) == TRUE){
+      levels(newdata[[i]]) <- x$flev[[i]]
+    }   ## ensure corresponding variables in newdata have same levels as those in fitting
+    else if (is.character(newdata[[i]]) == TRUE){
+      newdata[[i]] <- as.factor(newdata[[i]])
+      levels(newdata[[i]]) <- x$flev[[i]]
+    }   ## convert factor levels provided as character strings into factor class
+  }
   x_new <- model.matrix(~ . , newdata)    ## model matrix from newdata
-  y_predict <- as.vector(x$beta %*% t(x_new))   ## predictions of response variable
+  y_predict <- drop(x$beta %*% t(x_new))   ## the vector of predictions of response variable
+  
   return(y_predict)
 }
