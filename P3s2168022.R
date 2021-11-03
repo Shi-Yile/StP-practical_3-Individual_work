@@ -73,24 +73,34 @@ plot.linmod <- function(x){
 
 
 predict.linmod <- function(x, newdata){
-## a predict method for x, an object of class 'linmod' with newdata, a data frame containing values of predictor variables
-## Output: a vector of predictions based on newdata 
+## a predict method for x, an object of class 'linmod', with newdata, a data frame containing values of predictor variables
+## Output: an error message if newdata contains wrong levels, or a vector of predictions based on newdata 
+  
+  error_message <- NULL   ## initial error_message
   
   for (i in names(x$flev)){
     
-    if (is.factor(newdata[[i]]) == TRUE){
-      levels(newdata[[i]]) <- x$flev[[i]]
-    }   ## ensure corresponding factor variables in newdata have same levels as those in fitting model
+    if (is.character(newdata[[i]]) == TRUE){
+      newdata[[i]] <- as.factor(newdata[[i]])   
+    } ## convert factor levels provided as character strings into factor class
     
-    else if (is.character(newdata[[i]]) == TRUE){
-      newdata[[i]] <- as.factor(newdata[[i]])   ## convert factor levels provided as character strings into factor class
-      levels(newdata[[i]]) <- x$flev[[i]]   ## ensure the levels are the same as those in fitting model
-    }     
-  }
+    ## following condition statements checks if newdata contains levels that are not included in flev
+    if (all(levels(newdata[[i]]) %in% x$flev[[i]]) == TRUE){
+      levels(newdata[[i]]) <- x$flev[[i]] 
+    } ## if it doesn't, ensure that corresponding factor variables in newdata have same levels as those in fitting model
+    else{
+      error_message <- 'Error: level out of range'
+      break
+    } ## if it does, set up an error message and break the loop
+  }   
   
-  x_new <- model.matrix(~ . , newdata)    ## model matrix from newdata
-  y_predict <- drop(x$beta %*% t(x_new))   ## calculate the vector of predictions of response variable
+  if (is.null(error_message) == TRUE){
+    x_new <- model.matrix(~ . , newdata)    ## model matrix from newdata
+    y_predict <- drop(x$beta %*% t(x_new))   ## calculate the vector of predictions of response variable
+    print(y_predict)
+  }   ## if newdata doesn't contain levels that are not included in flev, use fitting model to predict
+  else{ 
+    print(error_message)
+  } ## if newdata contains levels that are not included in flev, print error messeage
   
-  return(y_predict)
-
 } ## Predict Method Function
