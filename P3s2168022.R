@@ -1,9 +1,9 @@
 ## Yile Shi (s2168022)
 
-## Linear Regression Model:
+
 linmod <- function(formula, dat){
 ## linmod function: using QR decomposition approach to fit linear models as lm() in R does.
-## Input: formula - a specified linear model formula; dat - a data frame containing corresponding data.
+## Input: formula - a specified linear model formula,e.g. y ~ x1 + x2 ; dat - a data frame containing corresponding data.
 ## Output: re - an object of class 'linmod', a list containing following elements:
   ##  beta - the vector of least squares parameter estimates      V - estimated covariance matrix 
   ##  mu - the vector of expected values      y - the vector of response variables
@@ -29,7 +29,7 @@ linmod <- function(formula, dat){
   resid <- y - y_fitted     ## residuals
   var_resid <- as.numeric(resid %*% t(resid) / (n - p))     ## the variance of residuals
   inv_R <- backsolve(qr.R(qrx), diag(p))    ## the inverse of R
-  V <- (inv_R %*% t(inv_R)) * var_resid    ## the estimated covariance matrix of least square estimators
+  V <- (inv_R %*% t(inv_R)) * var_resid    ## estimated covariance matrix of least square estimators, R^{-1} Q^{-T} sigma^2
   colnames(V) <- rownames(V) <- colnames(x)   ## name the rows and columns of estimated covariance matrix
   
   flev <- NULL    ## initial list flev
@@ -37,7 +37,7 @@ linmod <- function(formula, dat){
     if (is.factor(dat[[i]]) == TRUE){
       flev[[i]] <- levels(dat[[i]])
     }
-  } ## use a loop to find factor variables and store their levels in list flev
+  } ## a loop to find factor variables and store their levels in list flev
     
   sigma <- c(sqrt(var_resid))   ## the estimated standard deviation of response and residuals
   names(sigma) <- 'residuals'     ## name sigma to identify response and residuals
@@ -45,42 +45,52 @@ linmod <- function(formula, dat){
   re <- list(beta = beta, V = V, mu = mu, y = y, yname = yname, flev = flev, fitted_values = drop(y_fitted), residuals = drop(resid), formula = formula, sigma = sigma) 
   class(re) <- 'linmod'   ## return to an object of class 'linmod'
   return(re)
-}
 
-## Print Function
+} ## Linear Regression Function
+
+
 print.linmod <- function(x){
 ##  a print method function for x, an object of class 'linmod'
-  
+##  Output: model formula and a matrix contains parameters estimates and standard errors 
+    
   est_bind <- cbind(x$beta, sqrt(diag(x$V)))    ## calculate standard deviations and bind with parameters estimates 
   colnames(est_bind) <- c('Estimate', 's.e.')   ## name the columns of bound matrix    
   print(x$formula)    ## print formula 
   cat("\n")     ## print blank line
   print(est_bind)     ## print bound matrix
-}
 
-## Plot Function
+} ## Print Method Function
+
+
 plot.linmod <- function(x){
 ##  a plot method function for x, an object of class 'linmod'
+##  Output: a scatter plot of residuals of fitted values with a dashed line where residual is 0 
   
   plot(x = x$fitted_values, y = x$residuals, xlab = 'fitted values', ylab = 'residuals', xlim = )    ## plot model residuals against fitted values
-  abline(h = 0, col = 'blue', lty = 'dashed')  ## dashed horizontal line
-}
+  abline(h = 0, col = 'red', lty = 'dashed', lwd = 2)  ## dashed horizontal line
 
-## Predict Function
+} ## Plot Method Function
+
+
 predict.linmod <- function(x, newdata){
 ## a predict method for x, an object of class 'linmod' with newdata, a data frame containing values of predictor variables
+## Output: a vector of predictions based on newdata 
   
   for (i in names(x$flev)){
+    
     if (is.factor(newdata[[i]]) == TRUE){
       levels(newdata[[i]]) <- x$flev[[i]]
-    }   ## ensure corresponding variables in newdata have same levels as those in fitting
+    }   ## ensure corresponding factor variables in newdata have same levels as those in fitting model
+    
     else if (is.character(newdata[[i]]) == TRUE){
-      newdata[[i]] <- as.factor(newdata[[i]])
-      levels(newdata[[i]]) <- x$flev[[i]]
-    }   ## convert factor levels provided as character strings into factor class
+      newdata[[i]] <- as.factor(newdata[[i]])   ## convert factor levels provided as character strings into factor class
+      levels(newdata[[i]]) <- x$flev[[i]]   ## ensure the levels are the same as those in fitting model
+    }     
   }
+  
   x_new <- model.matrix(~ . , newdata)    ## model matrix from newdata
-  y_predict <- drop(x$beta %*% t(x_new))   ## the vector of predictions of response variable
+  y_predict <- drop(x$beta %*% t(x_new))   ## calculate the vector of predictions of response variable
   
   return(y_predict)
-}
+
+} ## Predict Method Function
