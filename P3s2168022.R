@@ -5,10 +5,16 @@ linmod <- function(formula, dat){
 ## linmod function: using QR decomposition approach to fit linear models as lm() in R does.
 ## Input: formula - a specified linear model formula,e.g. y ~ x1 + x2 ; dat - a data frame containing corresponding data.
 ## Output: re - an object of class 'linmod', a list containing following elements:
-  ##  beta - the vector of least squares parameter estimates      V - estimated covariance matrix 
-  ##  mu - the vector of expected values      y - the vector of response variables
-  ##  yname - the name of response variables      formula - model formula
-  ##  flev - a named list for factor variables and their levels     sigma - estimated standard deviation
+  ##  beta - the vector of least squares parameter estimates      
+  ##  V - estimated covariance matrix 
+  ##  mu - the vector of expected values      
+  ##  y - the vector of response variables
+  ##  yname - the name of response variables      
+  ##  formula - model formula
+  ##  flev - a named list for factor variables and their levels     
+  ##  fitted_value
+  ##  residuals
+  ##  sigma - estimated standard deviation
 
   y <- model.frame(formula, dat)[[1]]   ## the vector of response variable
   yname <- all.vars(formula)[1]   ## the name of response variable
@@ -66,8 +72,8 @@ plot.linmod <- function(x){
 ##  a plot method function for x, an object of class 'linmod'
 ##  Output: a scatter plot of residuals of fitted values with a dashed line where residual is 0 
   
-  plot(x = x$fitted_values, y = x$residuals, xlab = 'fitted values', ylab = 'residuals', xlim = )    ## plot model residuals against fitted values
-  abline(h = 0, col = 'red', lty = 'dashed', lwd = 2)  ## dashed horizontal line
+  plot(x = x$fitted_values, y = x$residuals, xlab = 'fitted values', ylab = 'residuals')    ## plot model residuals against fitted values
+  abline(h = 0, col = 'red', lty = 'dashed')  ## dashed horizontal line
 
 } ## Plot Method Function
 
@@ -84,7 +90,7 @@ predict.linmod <- function(x, newdata){
       newdata[[i]] <- as.factor(newdata[[i]])   
     } ## convert factor levels provided as character strings into factor class
     
-    ## following condition statements checks if newdata contains levels that are not included in flev
+    ## following condition statements check if newdata contains levels that are not included in flev
     if (all(levels(newdata[[i]]) %in% x$flev[[i]]) == TRUE){
       levels(newdata[[i]]) <- x$flev[[i]] 
     } ## if it doesn't, ensure that corresponding factor variables in newdata have same levels as those in fitting model
@@ -95,7 +101,8 @@ predict.linmod <- function(x, newdata){
   }   
   
   if (is.null(error_message) == TRUE){
-    x_new <- model.matrix(~ . , newdata)    ## model matrix from newdata
+    xname <- all.vars(x$formula)[-1]    ## the names of explanatory variable(s) 
+    x_new <- model.matrix(~. , newdata[xname])    ## model matrix from newdata
     y_predict <- drop(x$beta %*% t(x_new))   ## calculate the vector of predictions of response variable
     print(y_predict)
   }   ## if newdata doesn't contain levels that are not included in flev, use fitting model to predict
