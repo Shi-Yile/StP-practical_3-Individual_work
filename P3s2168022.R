@@ -2,8 +2,8 @@
 
 
 linmod <- function(formula, dat){
-## linmod function: using QR decomposition approach to fit linear models as lm() in R does.
-## Input: formula - a specified linear model formula,e.g. y ~ x1 + x2 ; dat - a data frame containing corresponding data.
+## This is a function to fit linear models as lm() in R does, using QR decomposition approach.
+## Input: formula - a specified linear model formula, e.g. y ~ x1 + x2 ; dat - a data frame containing corresponding data
 ## Output: re - an object of class 'linmod', a list containing following elements:
   ##  beta - the vector of least squares parameter estimates      
   ##  V - estimated covariance matrix 
@@ -12,8 +12,8 @@ linmod <- function(formula, dat){
   ##  yname - the name of response variables      
   ##  formula - model formula
   ##  flev - a named list for factor variables and their levels     
-  ##  fitted_value
-  ##  residuals
+  ##  fitted_value - a vector of fitted values of response variable using parameters estimates
+  ##  residuals - a vector of residuals between the true values of response variable and its fitted values
   ##  sigma - estimated standard deviation
 
   y <- model.frame(formula, dat)[[1]]   ## the vector of response variable
@@ -30,12 +30,12 @@ linmod <- function(formula, dat){
   
   y_fitted <- beta %*% t(x)   ## the vector of 'fitted values'
   mu <- mean(y_fitted)    ## expected value of 'fitted values'
-  names(mu) <- 'fitted'   ## name to identify
+  names(mu) <- 'fitted'   ## name to identify fitted values
   
-  resid <- y - y_fitted     ## residuals
-  var_resid <- as.numeric(resid %*% t(resid) / (n - p))     ## the variance of residuals
+  residuals <- y - y_fitted     ## residuals
+  var_residuals <- as.numeric(residuals %*% t(residuals) / (n - p))     ## the variance of residuals
   inv_R <- backsolve(qr.R(qrx), diag(p))    ## the inverse of R
-  V <- (inv_R %*% t(inv_R)) * var_resid    ## estimated covariance matrix of least square estimators, R^{-1} Q^{-T} sigma^2
+  V <- (inv_R %*% t(inv_R)) * var_residuals    ## estimated covariance matrix of least square estimators, R^{-1} Q^{-T} sigma^2
   colnames(V) <- rownames(V) <- colnames(x)   ## name the rows and columns of estimated covariance matrix
   
   flev <- NULL    ## initial list flev
@@ -45,10 +45,10 @@ linmod <- function(formula, dat){
     }
   } ## a loop to find factor variables and store their levels in list flev
     
-  sigma <- c(sqrt(var_resid))   ## the estimated standard deviation of response and residuals
+  sigma <- c(sqrt(var_residuals))   ## the estimated standard deviation of response and residuals
   names(sigma) <- 'residuals'     ## name sigma to identify response and residuals
 
-  re <- list(beta = beta, V = V, mu = mu, y = y, yname = yname, flev = flev, fitted_values = drop(y_fitted), residuals = drop(resid), formula = formula, sigma = sigma) 
+  re <- list(beta = beta, V = V, mu = mu, y = y, yname = yname, formula = formula, flev = flev, sigma = sigma, fitted_values = drop(y_fitted), residuals = drop(residuals)) 
   class(re) <- 'linmod'   ## return to an object of class 'linmod'
   return(re)
 
@@ -57,7 +57,7 @@ linmod <- function(formula, dat){
 
 print.linmod <- function(x){
 ##  a print method function for x, an object of class 'linmod'
-##  Output: model formula and a matrix contains parameters estimates and standard errors 
+##  Output: model formula and a matrix contains parameters estimates and their standard errors 
     
   est_bind <- cbind(x$beta, sqrt(diag(x$V)))    ## calculate standard deviations and bind with parameters estimates 
   colnames(est_bind) <- c('Estimate', 's.e.')   ## name the columns of bound matrix    
@@ -80,7 +80,7 @@ plot.linmod <- function(x){
 
 predict.linmod <- function(x, newdata){
 ## a predict method for x, an object of class 'linmod', with newdata, a data frame containing values of predictor variables
-## Output: an error message if newdata contains wrong levels, or a vector of predictions based on newdata 
+## Output: an error message if newdata contains wrong factor levels, or a vector of predictions of response variable based on newdata 
   
   error_message <- NULL   ## initial error_message
   
@@ -98,6 +98,7 @@ predict.linmod <- function(x, newdata){
       error_message <- 'Error: level out of range'
       break
     } ## if it does, set up an error message and break the loop
+  
   }   
   
   if (is.null(error_message) == TRUE){
@@ -108,6 +109,6 @@ predict.linmod <- function(x, newdata){
   }   ## if newdata doesn't contain levels that are not included in flev, use fitting model to predict
   else{ 
     print(error_message)
-  } ## if newdata contains levels that are not included in flev, print error messeage
+  } ## if newdata contains levels that are not included in flev, print error message
   
 } ## Predict Method Function
